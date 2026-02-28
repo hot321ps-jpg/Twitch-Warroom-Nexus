@@ -4,10 +4,22 @@ import { detectAnomalies } from "@/lib/anomaly";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-
-  // 允許從 query 指定 channels（不指定就用預設/示範）
   const q = url.searchParams.get("channels");
-  const channels = (q ? q.split(",") : ["wsx70529"]).map((s) => s.trim()).filter(Boolean);
+
+  const channels = q
+    ? q.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  // ✅ 沒輸入頻道就回空（維持乾淨）
+  if (!channels.length) {
+    return NextResponse.json({
+      generatedAt: Date.now(),
+      usedMock: false,
+      kpis: { totalViewers: 0, anomalyCount: 0 },
+      alerts: [],
+      channels: []
+    });
+  }
 
   const snapshot = await getChannelsSnapshot(channels);
   const anomalies = detectAnomalies(snapshot.channels);
