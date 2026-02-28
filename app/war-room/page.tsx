@@ -1,21 +1,22 @@
 import { getChannelsSnapshot } from "@/lib/twitch";
 import { detectAnomalies } from "@/lib/anomaly";
 
-function parseChannels(raw?: string | string[]) {
-  const s = Array.isArray(raw) ? raw[0] : raw;
-  if (!s) return ["wsx70529"];
-  return s
+function parseChannels(value: unknown) {
+  const raw =
+    typeof value === "string"
+      ? value
+      : Array.isArray(value)
+        ? value.join(",")
+        : "";
+
+  return (raw || "wsx70529")
     .split(",")
-    .map((x) => x.trim())
+    .map((s) => s.trim())
     .filter(Boolean);
 }
 
-export default async function WarRoomPage({
-  searchParams
-}: {
-  searchParams?: { channels?: string };
-}) {
-  const channels = parseChannels(searchParams?.channels);
+export default async function WarRoomPage(props: any) {
+  const channels = parseChannels(props?.searchParams?.channels);
 
   const snapshot = await getChannelsSnapshot(channels);
   const anomalies = detectAnomalies(snapshot.channels);
