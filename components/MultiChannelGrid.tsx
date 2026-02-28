@@ -44,6 +44,23 @@ export default function MultiChannelGrid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh, refreshSec, query]);
 
+  // ✅ 核心：只讓「直播中」依序前 6 台 defaultOpen
+  const defaultOpenMap = useMemo(() => {
+    const map = new Map<string, boolean>();
+    const list = data?.channels ?? [];
+
+    let opened = 0;
+    for (const c of list) {
+      if (c?.isLive && opened < 6) {
+        map.set(c.login, true);
+        opened += 1;
+      } else {
+        map.set(c.login, false);
+      }
+    }
+    return map;
+  }, [data]);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -72,7 +89,11 @@ export default function MultiChannelGrid({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {(data?.channels ?? []).map((c: any) => (
-          <ChannelCard key={c.login} c={c} />
+          <ChannelCard
+            key={c.login}
+            c={c}
+            defaultOpen={Boolean(defaultOpenMap.get(c.login))}
+          />
         ))}
       </div>
     </div>
