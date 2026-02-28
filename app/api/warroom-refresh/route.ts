@@ -7,7 +7,10 @@ export async function GET(req: Request) {
   const q = url.searchParams.get("channels");
 
   const channels = q
-    ? q.split(",").map((s) => s.trim()).filter(Boolean)
+    ? q
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
     : [];
 
   // ✅ 沒輸入頻道就回空（維持乾淨）
@@ -24,17 +27,18 @@ export async function GET(req: Request) {
   const snapshot = await getChannelsSnapshot(channels);
   const anomalies = detectAnomalies(snapshot.channels);
 
-  const alerts = [
-    ...(snapshot.usedMock ? [{ type: "warn", text: "未設定 Twitch API 憑證：目前使用示範資料（mock）。" }] : []),
-    ...anomalies.alerts
-  ];
+  // ✅ 商用：把後端 warnings 轉成前端 alerts
+  const warnings = snapshot.warnings ?? [];
+  const warnAlerts = warnings.map((w) => ({ type: "warn" as const, text: w }));
+
+  const alerts = [...warnAlerts, ...anomalies.alerts];
 
   return NextResponse.json({
     generatedAt: Date.now(),
     usedMock: snapshot.usedMock,
     kpis: {
       totalViewers: snapshot.channels.reduce((a, c) => a + (c.viewers ?? 0), 0),
-      anomalyCount: anomalies.alerts.length
+      anomalyCount: alerts.length
     },
     alerts,
     channels: anomalies.channels
