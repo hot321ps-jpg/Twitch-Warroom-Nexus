@@ -1,11 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import TwitchEmbed from "@/components/TwitchEmbed";
 
-export default function ChannelCard({ c }: { c: any }) {
-  // 預設：直播中就顯示播放器；離線先不顯示（可手動打開）
-  const [showPlayer, setShowPlayer] = useState<boolean>(Boolean(c?.isLive));
+export default function ChannelCard({
+  c,
+  defaultOpen = false
+}: {
+  c: any;
+  defaultOpen?: boolean;
+}) {
+  const [showPlayer, setShowPlayer] = useState<boolean>(defaultOpen);
+
+  // ✅ 當資料更新（例如離線→直播）時，若 defaultOpen 允許就自動打開
+  useEffect(() => {
+    setShowPlayer((prev) => prev || defaultOpen);
+  }, [defaultOpen]);
 
   return (
     <div className="rounded-2xl p-4 border" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
@@ -36,10 +46,10 @@ export default function ChannelCard({ c }: { c: any }) {
         {c.isLive ? (c.title || "（無標題）") : "目前未開台"}
       </div>
 
-      {/* ✅ Twitch Player iframe */}
+      {/* ✅ 只在 showPlayer 時渲染 TwitchEmbed；Embed 本身再做 inView 懶載入 */}
       {showPlayer ? (
         <div className="mt-3">
-          <TwitchEmbed channel={c.login} autoplay muted height={240} />
+          <TwitchEmbed channel={c.login} autoplay muted height={240} rootMargin="250px" />
         </div>
       ) : null}
 
