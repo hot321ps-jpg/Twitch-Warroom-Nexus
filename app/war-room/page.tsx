@@ -1,15 +1,41 @@
-import StatCard from "@/components/StatCard";
-import AlertBar from "@/components/AlertBar";
+import { getChannelsSnapshot } from "@/lib/twitch";
+import { detectAnomalies } from "@/lib/anomaly";
 
-async function getData() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/warroom-refresh`, {
-    cache: "no-store"
-  });
-  return res.json();
+function parseChannels(raw?: string | string[]) {
+  const s = Array.isArray(raw) ? raw[0] : raw;
+  if (!s) return ["wsx70529"];
+  return s
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
 }
 
-export default async function WarRoomPage() {
-  const data = await getData();
+export default async function WarRoomPage({
+  searchParams
+}: {
+  searchParams?: { channels?: string };
+}) {
+  const channels = parseChannels(searchParams?.channels);
+
+  const snapshot = await getChannelsSnapshot(channels);
+  const anomalies = detectAnomalies(snapshot.channels);
+
+  const alerts = [
+    ...(snapshot.usedMock
+      ? [{ type: "warn", text: "未設定 Twitch API 憑證：目前使用示範資料（mock）。" }]
+      : []),
+    ...anomalies.alerts
+  ];
+
+  const data = {
+    generatedAt: Date.now(),
+    kpis: {
+      totalViewers: snapshot.channels.reduce((a, c) => a + (c.viewers ?? 0), 0),
+      anomalyCount: anomalies.alerts.length
+    },
+    alerts,
+    channels: anomalies.channels
+  };
 
   const online = data.channels.filter((c: any) => c.isLive).length;
   const total = data.channels.length;
@@ -28,13 +54,36 @@ export default async function WarRoomPage() {
         </div>
       </div>
 
-      <AlertBar items={data.alerts} />
+      <div className="space-y-2">
+        {(data.alerts ?? []).map((a: any, i: number) => (
+          <div
+            key={i}
+            className="rounded-2xl p-3 border text-sm"
+            style={{ borderColor: "var(--border)", background: "rgba(255,255,255,0.04)" }}
+          >
+            <span className="font-semibold">[{String(a.type).toUpperCase()}]</span>
+            <span className="ml-2">{a.text}</span>
+          </div>
+        ))}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard title="監控頻道" value={String(total)} hint="目前 API 回傳的頻道數" />
-        <StatCard title="直播中" value={String(online)} hint="isLive = true" />
-        <StatCard title="總觀看（示範）" value={String(data.kpis.totalViewers)} hint="可替換成你真實統計" />
-        <StatCard title="異常事件" value={String(data.kpis.anomalyCount)} hint="由 anomaly.ts 判定" />
+        <div className="rounded-2xl p-4 border" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+          <div className="text-sm" style={{ color: "var(--muted)" }}>監控頻道</div>
+          <div className="mt-1 text-2xl font-semibold">{total}</div>
+        </div>
+        <div className="rounded-2xl p-4 border" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+          <div className="text-sm" style={{ color: "var(--muted)" }}>直播中</div>
+          <div className="mt-1 text-2xl font-semibold">{online}</div>
+        </div>
+        <div className="rounded-2xl p-4 border" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+          <div className="text-sm" style={{ color: "var(--muted)" }}>總觀看（示範）</div>
+          <div className="mt-1 text-2xl font-semibold">{data.kpis.totalViewers}</div>
+        </div>
+        <div className="rounded-2xl p-4 border" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+          <div className="text-sm" style={{ color: "var(--muted)" }}>異常事件</div>
+          <div className="mt-1 text-2xl font-semibold">{data.kpis.anomalyCount}</div>
+        </div>
       </div>
 
       <div className="rounded-2xl p-5 border" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
@@ -61,11 +110,7 @@ export default async function WarRoomPage() {
               {c.flags?.length ? (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {c.flags.map((f: string) => (
-                    <span
-                      key={f}
-                      className="text-xs px-2 py-1 rounded-full border"
-                      style={{ borderColor: "var(--border)", color: "var(--text)" }}
-                    >
+                    <span key={f} className="text-xs px-2 py-1 rounded-full border" style={{ borderColor: "var(--border)" }}>
                       {f}
                     </span>
                   ))}
