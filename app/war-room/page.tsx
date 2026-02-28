@@ -60,7 +60,10 @@ export default async function WarRoomPage(props: any) {
           <div
             key={i}
             className="rounded-2xl p-3 border text-sm"
-            style={{ borderColor: "var(--border)", background: "rgba(255,255,255,0.04)" }}
+            style={{
+              borderColor: "var(--border)",
+              background: "rgba(255,255,255,0.04)"
+            }}
           >
             <span className="font-semibold">[{String(a.type).toUpperCase()}]</span>
             <span className="ml-2">{a.text}</span>
@@ -73,14 +76,17 @@ export default async function WarRoomPage(props: any) {
           <div className="text-sm" style={{ color: "var(--muted)" }}>監控頻道</div>
           <div className="mt-1 text-2xl font-semibold">{total}</div>
         </div>
+
         <div className="rounded-2xl p-4 border" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
           <div className="text-sm" style={{ color: "var(--muted)" }}>直播中</div>
           <div className="mt-1 text-2xl font-semibold">{online}</div>
         </div>
+
         <div className="rounded-2xl p-4 border" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
           <div className="text-sm" style={{ color: "var(--muted)" }}>總觀看（示範）</div>
           <div className="mt-1 text-2xl font-semibold">{data.kpis.totalViewers}</div>
         </div>
+
         <div className="rounded-2xl p-4 border" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
           <div className="text-sm" style={{ color: "var(--muted)" }}>異常事件</div>
           <div className="mt-1 text-2xl font-semibold">{data.kpis.anomalyCount}</div>
@@ -89,6 +95,7 @@ export default async function WarRoomPage(props: any) {
 
       <div className="rounded-2xl p-5 border" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
         <h2 className="text-lg font-semibold">頻道摘要</h2>
+
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
           {data.channels.map((c: any) => (
             <div key={c.login} className="rounded-2xl p-4 border" style={{ borderColor: "var(--border)" }}>
@@ -99,6 +106,7 @@ export default async function WarRoomPage(props: any) {
                     @{c.login} · {c.isLive ? "直播中" : "離線"}
                   </div>
                 </div>
+
                 <div className="text-sm font-semibold" style={{ color: c.isLive ? "var(--ok)" : "var(--muted)" }}>
                   {c.isLive ? `${c.viewers} viewers` : "offline"}
                 </div>
@@ -111,7 +119,11 @@ export default async function WarRoomPage(props: any) {
               {c.flags?.length ? (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {c.flags.map((f: string) => (
-                    <span key={f} className="text-xs px-2 py-1 rounded-full border" style={{ borderColor: "var(--border)" }}>
+                    <span
+                      key={f}
+                      className="text-xs px-2 py-1 rounded-full border"
+                      style={{ borderColor: "var(--border)" }}
+                    >
                       {f}
                     </span>
                   ))}
