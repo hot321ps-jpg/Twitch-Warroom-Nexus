@@ -5,37 +5,44 @@ function env(name: string) {
 }
 
 export type SnapshotResult = {
-  usedMock: boolean;              // 保留欄位，商用版永遠 false（除非你未來想開 demo 模式）
+  usedMock: boolean;
   channels: ChannelSnapshot[];
-  warnings?: string[];            // ✅ 商用：把抓取失敗原因回報給上層顯示
+  warnings?: string[];
 };
 
 /**
- * 商用版策略
- * - 沒有 Twitch 憑證：回空（不產生 mock）
- * - API 失敗：回空 + warnings（不產生 mock）
- * - logins 空：回空
+ * 監看版策略
+ * - 有 Twitch 憑證：用 Helix 真實抓資料（users + streams）
+ * - 沒憑證：回「骨架資料」(每個 login 一張卡) + warnings
+ *   讓 UI 仍可顯示並可用 iframe 監看（不顯示即時數據）
  */
 export async function getChannelsSnapshot(logins: string[]): Promise<SnapshotResult> {
   const clientId = env("TWITCH_CLIENT_ID");
   const token = env("TWITCH_APP_ACCESS_TOKEN");
 
-  // ✅ 沒有頻道就直接回空
   if (!logins?.length) {
     return { usedMock: false, channels: [] };
   }
 
-  // ✅ 沒有憑證就回空（維持乾淨）
+  // ✅ 沒憑證：回骨架資料（可監看）
   if (!clientId || !token) {
     return {
-      usedMock: false,
-      channels: [],
-      warnings: ["Missing TWITCH_CLIENT_ID / TWITCH_APP_ACCESS_TOKEN"]
+      usedMock: true,
+      channels: logins.map((login) => ({
+        login,
+        displayName: login,
+        isLive: false,
+        title: "",
+        category: "",
+        viewers: 0,
+        startedAt: null
+      })),
+      warnings: ["未設定 Twitch API 憑證：目前僅提供播放器監看（不顯示即時數據）。"]
     };
   }
 
   try {
-    // Helix: users by login
+    // Helix: Get Users by login
     const usersUrl = `https://api.twitch.tv/helix/users?${logins
       .map((l) => `login=${encodeURIComponent(l)}`)
       .join("&")}`;
@@ -49,10 +56,19 @@ export async function getChannelsSnapshot(logins: string[]): Promise<SnapshotRes
     });
 
     if (!usersRes.ok) {
+      // ✅ API 失敗：也回骨架資料，至少能監看
       return {
-        usedMock: false,
-        channels: [],
-        warnings: [`Helix users request failed: ${usersRes.status}`]
+        usedMock: true,
+        channels: logins.map((login) => ({
+          login,
+          displayName: login,
+          isLive: false,
+          title: "",
+          category: "",
+          viewers: 0,
+          startedAt: null
+        })),
+        warnings: [`Helix users request failed: ${usersRes.status}（已切換監看模式）`]
       };
     }
 
@@ -65,12 +81,20 @@ export async function getChannelsSnapshot(logins: string[]): Promise<SnapshotRes
 
     const ids = [...idByLogin.values()].map((x) => x.id);
 
-    // ✅ users 查不到任何人（login 打錯 or 不存在）→ 回空但給 warning
+    // ✅ users 查不到人：回骨架
     if (!ids.length) {
       return {
-        usedMock: false,
-        channels: [],
-        warnings: ["No users found for provided logins"]
+        usedMock: true,
+        channels: logins.map((login) => ({
+          login,
+          displayName: login,
+          isLive: false,
+          title: "",
+          category: "",
+          viewers: 0,
+          startedAt: null
+        })),
+        warnings: ["查不到該 login（或帳號不存在/拼錯），已切換監看模式"]
       };
     }
 
@@ -89,9 +113,20 @@ export async function getChannelsSnapshot(logins: string[]): Promise<SnapshotRes
 
     if (!streamsRes.ok) {
       return {
-        usedMock: false,
-        channels: [],
-        warnings: [`Helix streams request failed: ${streamsRes.status}`]
+        usedMock: true,
+        channels: logins.map((login) => {
+          const u = idByLogin.get(login);
+          return {
+            login,
+            displayName: u?.display_name ?? login,
+            isLive: false,
+            title: "",
+            category: "",
+            viewers: 0,
+            startedAt: null
+          };
+        }),
+        warnings: [`Helix streams request failed: ${streamsRes.status}（已切換監看模式）`]
       };
     }
 
@@ -101,7 +136,6 @@ export async function getChannelsSnapshot(logins: string[]): Promise<SnapshotRes
       if (s?.user_login) liveByLogin.set(s.user_login, s);
     }
 
-    // ✅ 組合結果：維持 logins 原順序
     const channels: ChannelSnapshot[] = logins.map((login) => {
       const u = idByLogin.get(login);
       const live = liveByLogin.get(login);
@@ -119,10 +153,19 @@ export async function getChannelsSnapshot(logins: string[]): Promise<SnapshotRes
 
     return { usedMock: false, channels };
   } catch (err: any) {
+    // ✅ 例外：回骨架
     return {
-      usedMock: false,
-      channels: [],
-      warnings: [`Unexpected error: ${String(err?.message ?? err)}`]
+      usedMock: true,
+      channels: logins.map((login) => ({
+        login,
+        displayName: login,
+        isLive: false,
+        title: "",
+        category: "",
+        viewers: 0,
+        startedAt: null
+      })),
+      warnings: [`Unexpected error（已切換監看模式）: ${String(err?.message ?? err)}`]
     };
   }
 }
