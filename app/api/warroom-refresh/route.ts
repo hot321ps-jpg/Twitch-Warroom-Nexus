@@ -7,13 +7,10 @@ export async function GET(req: Request) {
   const q = url.searchParams.get("channels");
 
   const channels = q
-    ? q
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
+    ? q.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
 
-  // ✅ 沒輸入頻道就回空（維持乾淨）
+  // ✅ 沒輸入頻道就回空
   if (!channels.length) {
     return NextResponse.json({
       generatedAt: Date.now(),
@@ -27,7 +24,7 @@ export async function GET(req: Request) {
   const snapshot = await getChannelsSnapshot(channels);
   const anomalies = detectAnomalies(snapshot.channels);
 
-  // ✅ 商用：把後端 warnings 轉成前端 alerts
+  // ✅ warnings -> alerts
   const warnings = snapshot.warnings ?? [];
   const warnAlerts = warnings.map((w) => ({ type: "warn" as const, text: w }));
 
