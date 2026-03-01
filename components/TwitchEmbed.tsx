@@ -24,12 +24,9 @@ export default function TwitchEmbed({
     setParent(window.location.hostname);
   }, []);
 
-  // ✅ 懶載入：進入視窗（含預載 rootMargin）才開始真正建立 iframe
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-
-    // 已載入就不再觀察
     if (loaded) return;
 
     const obs = new IntersectionObserver(
@@ -62,13 +59,12 @@ export default function TwitchEmbed({
       className="rounded-xl border overflow-hidden"
       style={{ borderColor: "var(--border)" }}
     >
-      {/* 先顯示骨架，進入視窗才載入 iframe */}
       {!inView || !src ? (
         <div
           className="flex items-center justify-center text-sm"
           style={{ height, color: "var(--muted)", background: "rgba(255,255,255,0.03)" }}
         >
-          播放器待命中（滑到這張卡片會自動載入）
+          播放器待命中（滑到此卡片會自動載入）
         </div>
       ) : (
         <iframe
