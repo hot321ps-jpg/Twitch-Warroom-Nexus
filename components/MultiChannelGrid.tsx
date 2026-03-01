@@ -20,11 +20,7 @@ export default function MultiChannelGrid({
 
   async function refresh() {
     if (!hasChannels) {
-      setData({
-        generatedAt: Date.now(),
-        alerts: [],
-        channels: []
-      });
+      setData({ generatedAt: Date.now(), usedMock: false, alerts: [], channels: [] });
       return;
     }
 
@@ -50,14 +46,18 @@ export default function MultiChannelGrid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh, refreshSec, query, hasChannels]);
 
-  // ✅ 只讓「直播中」依序前 6 台 defaultOpen
+  // ✅ usedMock=true（監看模式）→ 自動開前 6 張
+  // ✅ usedMock=false（真實數據）→ 自動開直播中前 6 張
   const defaultOpenMap = useMemo(() => {
     const map = new Map<string, boolean>();
     const list = data?.channels ?? [];
+    const usedMock = Boolean(data?.usedMock);
 
     let opened = 0;
     for (const c of list) {
-      if (c?.isLive && opened < 6) {
+      const shouldAutoOpen = usedMock ? opened < 6 : (c?.isLive && opened < 6);
+
+      if (shouldAutoOpen) {
         map.set(c.login, true);
         opened += 1;
       } else {
@@ -67,42 +67,12 @@ export default function MultiChannelGrid({
     return map;
   }, [data]);
 
-  // ✅ 商用儀表板：空狀態（不會顯示測試帳號/卡片）
   if (!hasChannels) {
     return (
       <div className="rounded-2xl p-6 border" style={{ borderColor: "var(--border)", background: "rgba(255,255,255,0.03)" }}>
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div className="text-lg font-semibold">尚未加入任何頻道</div>
-            <div className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-              在上方「監控清單」貼上 Twitch login（逗號或換行分隔），即可開始監控與嵌入播放。
-            </div>
-          </div>
-
-          <div className="text-xs px-3 py-2 rounded-xl border" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
-            面板狀態：待命（無資料請求）
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "rgba(255,255,255,0.02)" }}>
-            <div className="font-semibold">效率</div>
-            <div className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-              未設定頻道時不打 API、不載入 iframe，適合上牆展示。
-            </div>
-          </div>
-          <div className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "rgba(255,255,255,0.02)" }}>
-            <div className="font-semibold">可靠</div>
-            <div className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-              Twitch embed 自動帶 parent=你的網域，避免黑屏。
-            </div>
-          </div>
-          <div className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "rgba(255,255,255,0.02)" }}>
-            <div className="font-semibold">可擴充</div>
-            <div className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-              下一步可接：告警 Webhook、輪播大螢幕、趨勢圖。
-            </div>
-          </div>
+        <div className="text-lg font-semibold">尚未加入任何頻道</div>
+        <div className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+          在上方貼上 Twitch login（逗號或換行分隔）即可開始監看。
         </div>
       </div>
     );
@@ -110,7 +80,6 @@ export default function MultiChannelGrid({
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="text-sm" style={{ color: "var(--muted)" }}>
           {loading
@@ -122,7 +91,7 @@ export default function MultiChannelGrid({
 
         <div className="flex items-center gap-2">
           <span className="text-xs px-2 py-1 rounded-full border" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
-            自動展開：直播中前 6 台
+            自動展開：{data?.usedMock ? "前 6 張（監看模式）" : "直播中前 6 張"}
           </span>
 
           <button
@@ -135,7 +104,6 @@ export default function MultiChannelGrid({
         </div>
       </div>
 
-      {/* Alerts (if any) */}
       {data?.alerts?.length ? (
         <div className="rounded-2xl p-4 border" style={{ borderColor: "var(--border)", background: "rgba(255,255,255,0.03)" }}>
           <div className="font-semibold mb-2">狀態提示</div>
