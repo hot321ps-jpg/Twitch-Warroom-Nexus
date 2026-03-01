@@ -12,7 +12,6 @@ export default function ChannelCard({
 }) {
   const [showPlayer, setShowPlayer] = useState<boolean>(defaultOpen);
 
-  // ✅ 當資料更新（例如離線→直播）時，若 defaultOpen 允許就自動打開
   useEffect(() => {
     setShowPlayer((prev) => prev || defaultOpen);
   }, [defaultOpen]);
@@ -23,13 +22,13 @@ export default function ChannelCard({
         <div>
           <div className="font-semibold">{c.displayName}</div>
           <div className="text-sm" style={{ color: "var(--muted)" }}>
-            @{c.login} · {c.isLive ? "直播中" : "離線"}
+            @{c.login} · {c.isLive ? "直播中" : "（未判定 / 離線）"}
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="text-sm font-semibold" style={{ color: c.isLive ? "var(--ok)" : "var(--muted)" }}>
-            {c.isLive ? `${c.viewers} viewers` : "offline"}
+            {c.isLive ? `${c.viewers} viewers` : "—"}
           </div>
 
           <button
@@ -43,10 +42,9 @@ export default function ChannelCard({
       </div>
 
       <div className="mt-3 text-sm" style={{ color: "var(--muted)" }}>
-        {c.isLive ? (c.title || "（無標題）") : "目前未開台"}
+        {c.isLive ? (c.title || "（無標題）") : "可直接開啟播放器監看"}
       </div>
 
-      {/* ✅ 只在 showPlayer 時渲染 TwitchEmbed；Embed 本身再做 inView 懶載入 */}
       {showPlayer ? (
         <div className="mt-3">
           <TwitchEmbed channel={c.login} autoplay muted height={240} rootMargin="250px" />
